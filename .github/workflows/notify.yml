@@ -1,0 +1,38 @@
+name: Сповіщення про матчі
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: notify
+  cancel-in-progress: false
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Надіслати сповіщення
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python -m matchbot
+
+      - name: Зберегти стан
+        if: always()
+        run: |
+          git config user.name "matchbot"
+          git config user.email "matchbot@users.noreply.github.com"
+          git add state.json
+          git diff --cached --quiet || (git commit -m "chore: оновити стан сповіщень" && git push)
